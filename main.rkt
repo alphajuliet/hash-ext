@@ -5,6 +5,7 @@
 ; AndrewJ 2018-08-31
 
 (provide hash-add
+         hash-sub
          hash-mul
          hash-sum
          hash-combine
@@ -47,6 +48,12 @@
 ;(: hash-add (-> HSN HSN HSN))
 (define hash-add
   (curry hash-combine hash-union +))
+
+; Subtract the values in two hashes where the keys match. For unmatched keys, include the value.
+;   (hash-sub (hash 'a 4 'b 5 'c 1) (hash 'a 1 'b 2)) => (hash 'a 3 'b 3 'c 1)
+;(: hash-sub (-> HSN HSN HSN))
+(define hash-sub
+  (curry hash-combine hash-union -))
 
 ; Multiply the values in two hashes, matched by key. For unmatched keys, don't include the product.
 ;   (hash-add (hash 'a 1 'b 2 'c 3) (hash 'a 4 'b 5)) => (hash 'a 4 'b 8)
@@ -99,6 +106,15 @@
                  (check-equal? (hash-add h1 h3)
                                (hash 'a 6 'b 8 'c 7))))
 
+    (test-case "Test hash-sub"
+               (let ([h1 (hash 'a 1 'b 2)]
+                     [h2 (hash 'a 3 'b 4)]
+                     [h3 (hash 'a 5 'b 6 'c 7)])
+                 (check-equal? (hash-sub h2 h1)
+                               (hash 'a 2 'b 2))
+                 (check-equal? (hash-sub h3 h1)
+                               (hash 'a 4 'b 4 'c 7))))
+    
     (test-case "Test hash-mul"
                (let ([h1 (hash 'a 1 'b 2)]
                      [h2 (hash 'a 3 'b 4)]
@@ -107,7 +123,7 @@
                                (hash 'a 3 'b 8))
                  (check-equal? (hash-mul h1 h3)
                                (hash 'a 5 'b 12))))
-
+    
     (test-case "Test hash-sum"
                (let ([h1 (hash 'a 1 'b 2 'c 3)])
                  (check-equal? (hash-sum h1)
