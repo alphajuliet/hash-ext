@@ -13,7 +13,8 @@
          hash-intersection
          hash-dotp
          hash-scale
-         hash-apply-factor)
+         hash-apply-factor
+         hash-enumerate)
 
 (require racket/hash)
 
@@ -86,6 +87,12 @@
 ; Selectively scale items in a hash
 (define (hash-apply-factor f h)
   (hash-union f h #:combine/key (λ (k v1 v2) (* v1 v2))))
+
+; Enumerate a hash into a list
+(define (hash-enumerate h)
+  (for*/list ([k (in-hash-keys h)]
+              [i (range 0 (hash-ref h k))])
+    k))
 
 ;---------------------------
 ; Unit tests
@@ -164,6 +171,10 @@
     ;               (check-equal? (hash-apply-factor f2 h1)
     ;                             (hash 'a 1 'b 2 'c 3))))
 
+    (test-case "Test hash enumerate"
+               (let ([h1 (hash 'a 1 'b 2)])
+                 (check-equal? (length (hash-enumerate h1)) 3)))
+    
     )
   (run-tests hash-ext-tests))
 ; The End
