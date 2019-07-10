@@ -14,7 +14,8 @@
          hash-dotp
          hash-scale
          hash-apply-factor
-         hash-enumerate)
+         hash-enumerate
+         hash-collect)
 
 (require racket/hash)
 
@@ -93,6 +94,11 @@
   (for*/list ([k (in-hash-keys h)]
               [i (range 0 (hash-ref h k))])
     k))
+
+; Collect a list into a hash of counts
+(define (hash-collect lst)
+  (apply hash (flatten (map (λ (x) `(,(car x) ,(length x)))
+                            (group-by identity lst)))))
 
 ;---------------------------
 ; Unit tests
@@ -174,6 +180,11 @@
     (test-case "Test hash enumerate"
                (let ([h1 (hash 'a 1 'b 2)])
                  (check-equal? (length (hash-enumerate h1)) 3)))
+
+    (test-case "Test hash collect"
+               (let ([lst '(a b b c c c)])
+                 (check-equal? (hash-collect lst)
+                                (hash 'a 1 'b 2 'c 3))))
     
     )
   (run-tests hash-ext-tests))
