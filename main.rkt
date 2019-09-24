@@ -19,13 +19,18 @@
 
 (require racket/hash)
 
+;---------------------------
+; Helper functions
+
 ; Return the intersection of a list
 ;(: intersection (-> (Listof Any) (Listof Any) (Listof Any)))
 (define (intersection l0 . lists)
-  (define (f l1 l2)
-  (remove-duplicates
-   (filter (λ (x) (member x l1))  
-           l2)))
+  
+  (define (f l1 l2) ; Pairwise intersection
+    (remove-duplicates
+     (filter (λ (x) (member x l1))  
+             l2)))
+  
   (for/fold ([x '()])
             ([lx lists])
     (f l0 lx)))
@@ -34,6 +39,8 @@
 ;(: mut->immut (-> HashTableTop HashTableTop))
 (define (mut->immut h)
   (apply hash (flatten (hash->list h))))
+
+;---------------------------
 
 ; Create the missing hash-intersection function, but limited to two hashes
 ;(: hash-intersection (-> HSN HSN [#:combine/key (-> Any Number Number Number)] HSN))
@@ -71,15 +78,14 @@
 ;   (hash-sum (hash 'a 1 'b 2)) => 3
 ;(: hash-sum (-> HSN Integer))
 (define (hash-sum h)
-  (foldl + 0 (hash-values h)))
+  (apply + (hash-values h)))
 
 ; Do mapping over all values in a hash and return a new hash. `hash-map` only returns a list.
 ;(: my-hash-map (-> (-> Any Number) HSN))
 (define (my-hash-map f h)
-  (define hnew (make-hash))
-  (for ([(key value) (in-hash h)])
-    (hash-set! hnew key (f value)))
-  (mut->immut hnew))
+   (for/fold ([h-out (make-immutable-hash)])
+             ([(k v) (in-hash h)])
+     (hash-set h-out k (f v))))
 
 ; Dot product over two hashes. 
 ;(: hash-dotp (-> HSN HSN HSN))
@@ -189,7 +195,7 @@
     (test-case "Test hash collect"
                (let ([lst '(a b b c c c)])
                  (check-equal? (hash-collect lst)
-                                (hash 'a 1 'b 2 'c 3))))
+                               (hash 'a 1 'b 2 'c 3))))
     
     )
   (run-tests hash-ext-tests))
