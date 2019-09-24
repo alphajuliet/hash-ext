@@ -21,10 +21,14 @@
 
 ; Return the intersection of a list
 ;(: intersection (-> (Listof Any) (Listof Any) (Listof Any)))
-(define (intersection l1 l2)
+(define (intersection l0 . lists)
+  (define (f l1 l2)
   (remove-duplicates
    (filter (λ (x) (member x l1))  
            l2)))
+  (for/fold ([x '()])
+            ([lx lists])
+    (f l0 lx)))
 
 ; Convert from a mutable to immutable hash
 ;(: mut->immut (-> HashTableTop HashTableTop))
@@ -158,6 +162,7 @@
                (let ([h1 (hash 'a 1 'c 3)]
                      [h2 (hash 'a 4 'b 5 'c 6)]
                      [h3 (hash 'a 7 'b 8)])
+                 (check-equal? (intersection '(1 2 3) '(2 3 4) '(3 4 5)) '(3))
                  (check-equal? (hash-intersection h1 h2)
                                (hash 'a 4 'c 18))
                  (check-equal? (hash-intersection h2 h3)
