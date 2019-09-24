@@ -42,13 +42,23 @@
 
 ;---------------------------
 
-; Create the missing hash-intersection function, but limited to two hashes
+; Create the missing hash-intersection function, but limited to two hashes.
+; The default combining function is multiplication.
 ;(: hash-intersection (-> HSN HSN [#:combine/key (-> Any Number Number Number)] HSN))
+
 (define (hash-intersection
          #:combine/key [combine/key (λ (k x y) (* x y))]
-         h1 h2)
-  (for/hash ([k (in-list (intersection (hash-keys h1) (hash-keys h2)))])
-    (values k (combine/key k (hash-ref h1 k) (hash-ref h2 k)))))
+         h0 . hrest)
+  
+  (define (pairwise-intersection
+           #:combine/key [combine/key (λ (k x y) (* x y))]
+           h1 h2)
+    (for/hash ([k (in-list (intersection (hash-keys h1) (hash-keys h2)))])
+      (values k (combine/key k (hash-ref h1 k) (hash-ref h2 k)))))
+
+  (for*/fold ([h h0])
+             ([two (in-list hrest)])
+    (pairwise-intersection h two #:combine/key combine/key)))
 
 ; Generalised hash combine function using union/intersection and a function
 ; f is typically hash-union or hash-intersection
@@ -59,20 +69,20 @@
 ; Add the values in two hashes where the keys match. For unmatched keys, include the value.
 ;   (hash-add (hash 'a 1 'b 2 'c 3) (hash 'a 4 'b 5)) => (hash 'a 5 'b 7 'c 3)
 ;(: hash-add (-> HSN HSN HSN))
-(define hash-add
-  (curry hash-combine hash-union +))
+(define (hash-add . hs)
+  (apply hash-union hs #:combine/key (λ (k v1 v2) (+ v1 v2))))
 
 ; Subtract the values in two hashes where the keys match. For unmatched keys, include the value.
 ;   (hash-sub (hash 'a 4 'b 5 'c 1) (hash 'a 1 'b 2)) => (hash 'a 3 'b 3 'c 1)
 ;(: hash-sub (-> HSN HSN HSN))
-(define hash-sub
-  (curry hash-combine hash-union -))
+(define (hash-sub . hs)
+  (apply hash-union hs #:combine/key (λ (k v1 v2) (- v1 v2))))
 
 ; Multiply the values in two hashes, matched by key. For unmatched keys, don't include the product.
 ;   (hash-add (hash 'a 1 'b 2 'c 3) (hash 'a 4 'b 5)) => (hash 'a 4 'b 8)
 ;(: hash-mul (-> HSN HSN HSN))
-(define hash-mul
-  (curry hash-combine hash-intersection *))
+(define (hash-mul . hs)
+  (apply hash-intersection hs #:combine/key (λ (k v1 v2) (* v1 v2))))
 
 ; Add all the values together in a hash
 ;   (hash-sum (hash 'a 1 'b 2)) => 3
@@ -83,9 +93,9 @@
 ; Do mapping over all values in a hash and return a new hash. `hash-map` only returns a list.
 ;(: my-hash-map (-> (-> Any Number) HSN))
 (define (my-hash-map f h)
-   (for/fold ([h-out (make-immutable-hash)])
-             ([(k v) (in-hash h)])
-     (hash-set h-out k (f v))))
+  (for/fold ([h-out (make-immutable-hash)])
+            ([(k v) (in-hash h)])
+    (hash-set h-out k (f v))))
 
 ; Dot product over two hashes. 
 ;(: hash-dotp (-> HSN HSN HSN))
@@ -127,7 +137,9 @@
                  (check-equal? (hash-add h1 h2)
                                (hash 'a 4 'b 6))
                  (check-equal? (hash-add h1 h3)
-                               (hash 'a 6 'b 8 'c 7))))
+                               (hash 'a 6 'b 8 'c 7))
+                 (check-equal? (hash-add h1 h2 h3)
+                               (hash 'a 9 'b 12 'c 7))))
 
     (test-case "Test hash-sub"
                (let ([h1 (hash 'a 1 'b 2)]
@@ -145,7 +157,9 @@
                  (check-equal? (hash-mul h1 h2)
                                (hash 'a 3 'b 8))
                  (check-equal? (hash-mul h1 h3)
-                               (hash 'a 5 'b 12))))
+                               (hash 'a 5 'b 12))
+                 (check-equal? (hash-mul h1 h2 h3)
+                               (hash 'a 15 'b 48))))
     
     (test-case "Test hash-sum"
                (let ([h1 (hash 'a 1 'b 2 'c 3)])
@@ -172,7 +186,9 @@
                  (check-equal? (hash-intersection h1 h2)
                                (hash 'a 4 'c 18))
                  (check-equal? (hash-intersection h2 h3)
-                               (hash 'a 28 'b 40))))
+                               (hash 'a 28 'b 40))
+                 (check-equal? (hash-intersection h1 h2 h3)
+                               (hash 'a 28))))
 
     (test-case "Test hash scale"
                (let ([h1 (hash 'a 1 'b 2)])
